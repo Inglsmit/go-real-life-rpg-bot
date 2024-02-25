@@ -36,12 +36,17 @@ func isStartMessage(update *tgbotapi.Update) bool {
 	return update.Message != nil && update.Message.Text == "/start"
 }
 
+func isCallbackQuery(update *tgbotapi.Update) bool {
+	return update.CallbackQuery != nil && update.CallbackQuery.Data != ""
+}
+
 func sendStringMessage(msg string) {
 	_, err := gBot.Send(tgbotapi.NewMessage(gChatId, msg))
 	if err != nil {
 		return
 	}
 }
+
 func delay(sec uint8) {
 	time.Sleep(time.Second * time.Duration(sec))
 }
@@ -62,7 +67,49 @@ func printIntro() {
 	sendMessageWithDelay(1, EMOJI_COIN)
 	sendMessageWithDelay(10, `For example, you spend half an hour doing yoga, for which you get 2 coins. After that, you have 2 hours of programming study, for which you get 8 coins. Now you can watch 1 episode of "Interns" and break even. It's that simple!`)
 	sendMessageWithDelay(6, `Mark completed useful activities to not lose your coins. And don't forget to "purchase" the reward before actually doing it.`)
+}
 
+func getKeyboardRow(buttonText, buttonCode string) []tgbotapi.InlineKeyboardButton {
+	return tgbotapi.NewInlineKeyboardRow(tgbotapi.NewInlineKeyboardButtonData(buttonText, buttonCode))
+}
+
+func askToPrintIntro() {
+	msg := tgbotapi.NewMessage(gChatId, "In the introductory messages, you can find the purpose of this bot and the rules of the game. What do you think?")
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		getKeyboardRow(BUTTON_TEXT_PRINT_INTRO, BUTTON_CODE_PRINT_INTRO),
+		getKeyboardRow(BUTTON_TEXT_SKIP_INTRO, BUTTON_CODE_SKIP_INTRO),
+	)
+	_, err := gBot.Send(msg)
+	if err != nil {
+		return
+	}
+}
+
+func showMenu() {
+	msg := tgbotapi.NewMessage(gChatId, "Choose option:")
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		getKeyboardRow(BUTTON_TEXT_BALANCE, BUTTON_CODE_BALANCE),
+		getKeyboardRow(BUTTON_TEXT_USEFUL_ACTIVITIES, BUTTON_CODE_USEFUL_ACTIVITIES),
+		getKeyboardRow(BUTTON_TEXT_REWARDS, BUTTON_CODE_REWARDS),
+	)
+
+	_, err := gBot.Send(msg)
+	if err != nil {
+		return
+	}
+}
+
+func updateProcessing(update *tgbotapi.Update) {
+	choiceCode := update.CallbackQuery.Data
+	log.Printf("[%T] %s", time.Now(), choiceCode)
+
+	switch choiceCode {
+	case BUTTON_CODE_PRINT_INTRO:
+		printIntro()
+		showMenu()
+	case BUTTON_CODE_SKIP_INTRO:
+		showMenu()
+	}
 }
 
 func main() {
@@ -74,11 +121,14 @@ func main() {
 	updates := gBot.GetUpdatesChan(updateConfig)
 
 	for update := range updates {
-		if isStartMessage(&update) {
+		if isCallbackQuery(&update) {
+			updateProcessing(&update)
+		} else if isStartMessage(&update) {
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
 			gChatId = update.Message.Chat.ID
-			printIntro()
+			askToPrintIntro()
+			//printIntro()
 		}
 	}
 
