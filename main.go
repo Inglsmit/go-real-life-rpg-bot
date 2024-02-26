@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -14,6 +15,17 @@ var (
 	gBot     *tgbotapi.BotAPI
 	gChatId  int64
 	err      error
+
+	gUsersInChat Users
+)
+
+type (
+	User struct {
+		id    int64
+		name  string
+		coins uint16
+	}
+	Users []*User
 )
 
 func init() {
@@ -99,11 +111,65 @@ func showMenu() {
 	}
 }
 
+func showBalance(user *User) {
+	msg := fmt.Sprintf("%s, your wallet is empty %s. Use useful activities to get more coins", user.name, EMOJI_DONT_KNOW)
+	if coins := user.coins; coins > 0 {
+		msg = fmt.Sprintf("%s, you have %d %s", user.name, EMOJI_COIN)
+	}
+	_, err := gBot.Send(tgbotapi.NewMessage(gChatId, msg))
+	if err != nil {
+		return
+	}
+
+	showMenu()
+}
+
+func isCallbackQueryMissing(update *tgbotapi.Update) bool {
+	return update.CallbackQuery == nil || update.CallbackQuery.From == nil
+}
+
+func getUserFromUpdate(update *tgbotapi.Update) (user *User, found bool) {
+	if isCallbackQueryMissing(update) {
+		return
+	}
+
+	userId := update.CallbackQuery.From.ID
+	for _, userInChat := range gUsersInChat {
+		if userId == userInChat.id {
+			return userInChat, true
+		}
+	}
+	return
+}
+
+func storeUserFromUpdate(update *tgbotapi.Update) (user *User, found bool) {
+	if isCallbackQueryMissing(update) {
+		return
+	}
+
+	from := update.CallbackQuery.From
+	// [?] what next string mean?
+	user = &User{id: from.ID, name: strings.TrimSpace(from.FirstName + " " + from.LastName), coins: 0}
+	gUsersInChat = append(gUsersInChat, user)
+	return user, true
+}
+
 func updateProcessing(update *tgbotapi.Update) {
+	user, found := getUserFromUpdate(update)
+	if !found {
+		user, found = storeUserFromUpdate(update)
+	}
+
 	choiceCode := update.CallbackQuery.Data
 	log.Printf("[%T] %s", time.Now(), choiceCode)
 
 	switch choiceCode {
+	case BUTTON_CODE_BALANCE:
+		showBalance(user)
+	case BUTTON_CODE_USEFUL_ACTIVITIES:
+		//showActivities()
+	case BUTTON_CODE_REWARDS:
+		//showRewards()
 	case BUTTON_CODE_PRINT_INTRO:
 		printIntro()
 		showMenu()

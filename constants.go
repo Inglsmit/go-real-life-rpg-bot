@@ -9,7 +9,7 @@ const (
 	EMOJI_SAD          = "\U0001F63F"   // 😿
 	EMOJI_BICEPS       = "\U0001F4AA"   // 💪
 	EMOJI_BUTTON_START = "\U000025B6  " // ▶
-	EMOJI_BUTTON_END   = "  \U000025C0" // ◀
+	EMOJI_BUTTON_END   = " \U000025C0"  // ◀
 
 	BUTTON_TEXT_PRINT_INTRO       = EMOJI_BUTTON_START + "View Introduction" + EMOJI_BUTTON_END
 	BUTTON_TEXT_SKIP_INTRO        = EMOJI_BUTTON_START + "Skip Introduction" + EMOJI_BUTTON_END
