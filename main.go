@@ -16,7 +16,35 @@ var (
 	gChatId  int64
 	err      error
 
-	gUsersInChat Users
+	gUsersInChat      Users
+	gUsefulActivities = Activities{
+		// Self-Development
+		{"yoga", "Yoga (15 minutes)", 1},
+		{"meditation", "Meditation (15 minutes)", 1},
+		{"language", "Learning a foreign language (15 minutes)", 1},
+		{"swimming", "Swimming (15 minutes)", 1},
+		{"walk", "Walk (15 minutes)", 1},
+		{"chores", "Chores (1 hour)", 1},
+
+		// Work
+		{"work_learning", "Studying work materials (15 minutes)", 1},
+		{"portfolio_work", "Working on a portfolio project (15 minutes)", 1},
+		{"resume_edit", "Resume editing (15 minutes)", 1},
+
+		// Creativity
+		{"creative", "Creative creation (15 minutes)", 1},
+		{"reading", "Reading fiction literature (15 minutes)", 1},
+	}
+
+	gRewards = Activities{
+		// Entertainment
+		{"watch_series", "Watching a series (1 episode)", 10},
+		{"watch_movie", "Watching a movie (1 item)", 30},
+		{"social_nets", "Browsing social networks (30 minutes)", 10},
+
+		// Food
+		{"eat_sweets", "300 kcal of sweets", 60},
+	}
 )
 
 type (
@@ -26,6 +54,14 @@ type (
 		coins uint16
 	}
 	Users []*User
+
+	Activity struct {
+		code, name string
+		coins      uint16
+	}
+
+	//List of the Activities. Which is slice of the pointers Activity
+	Activities []*Activity
 )
 
 func init() {
@@ -154,10 +190,32 @@ func storeUserFromUpdate(update *tgbotapi.Update) (user *User, found bool) {
 	return user, true
 }
 
+func showUsefulActivities() {
+	activitiesButtonsRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(gUsefulActivities)+1)
+	for _, activity := range gUsefulActivities {
+		activitiesButtonsRows = append(activitiesButtonsRows, getKeyboardRow(activity.name, activity.code))
+	}
+	activitiesButtonsRows = append(activitiesButtonsRows, getKeyboardRow(BUTTON_TEXT_PRINT_MENU, BUTTON_CODE_PRINT_MENU))
+
+	msg := tgbotapi.NewMessage(gChatId, "Track your actions or comeback to menu:")
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(activitiesButtonsRows...)
+	_, err := gBot.Send(msg)
+	if err != nil {
+		return
+	}
+}
+
+//func showRewards() {
+//
+//}
+
 func updateProcessing(update *tgbotapi.Update) {
 	user, found := getUserFromUpdate(update)
 	if !found {
-		user, found = storeUserFromUpdate(update)
+		if user, found = storeUserFromUpdate(update); !found {
+			gBot.Send(tgbotapi.NewMessage(gChatId, "Can't identify user"))
+			return
+		}
 	}
 
 	choiceCode := update.CallbackQuery.Data
@@ -167,7 +225,7 @@ func updateProcessing(update *tgbotapi.Update) {
 	case BUTTON_CODE_BALANCE:
 		showBalance(user)
 	case BUTTON_CODE_USEFUL_ACTIVITIES:
-		//showActivities()
+		showUsefulActivities()
 	case BUTTON_CODE_REWARDS:
 		//showRewards()
 	case BUTTON_CODE_PRINT_INTRO:
