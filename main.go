@@ -190,14 +190,20 @@ func storeUserFromUpdate(update *tgbotapi.Update) (user *User, found bool) {
 	return user, true
 }
 
-func showUsefulActivities() {
-	activitiesButtonsRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(gUsefulActivities)+1)
-	for _, activity := range gUsefulActivities {
-		activitiesButtonsRows = append(activitiesButtonsRows, getKeyboardRow(activity.name, activity.code))
+func showActivities(activities Activities, message string, isUseful bool) {
+	activitiesButtonsRows := make([][]tgbotapi.InlineKeyboardButton, 0, len(activities)+1)
+	for _, activity := range activities {
+		activityDescription := ""
+		if isUseful {
+			activityDescription = fmt.Sprintf("+ %d %s: %s", activity.coins, EMOJI_COIN, activity.name)
+		} else {
+			activityDescription = fmt.Sprintf("- %d %s: %s", activity.coins, EMOJI_COIN, activity.name)
+		}
+		activitiesButtonsRows = append(activitiesButtonsRows, getKeyboardRow(activityDescription, activity.code))
 	}
 	activitiesButtonsRows = append(activitiesButtonsRows, getKeyboardRow(BUTTON_TEXT_PRINT_MENU, BUTTON_CODE_PRINT_MENU))
 
-	msg := tgbotapi.NewMessage(gChatId, "Track your actions or comeback to menu:")
+	msg := tgbotapi.NewMessage(gChatId, message)
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(activitiesButtonsRows...)
 	_, err := gBot.Send(msg)
 	if err != nil {
@@ -205,9 +211,13 @@ func showUsefulActivities() {
 	}
 }
 
-//func showRewards() {
-//
-//}
+func showUsefulActivities() {
+	showActivities(gUsefulActivities, "Track your actions or comeback to menu:", true)
+}
+
+func showRewards() {
+	showActivities(gRewards, "Spend your coins or comeback to menu:", false)
+}
 
 func updateProcessing(update *tgbotapi.Update) {
 	user, found := getUserFromUpdate(update)
@@ -227,11 +237,13 @@ func updateProcessing(update *tgbotapi.Update) {
 	case BUTTON_CODE_USEFUL_ACTIVITIES:
 		showUsefulActivities()
 	case BUTTON_CODE_REWARDS:
-		//showRewards()
+		showRewards()
 	case BUTTON_CODE_PRINT_INTRO:
 		printIntro()
 		showMenu()
 	case BUTTON_CODE_SKIP_INTRO:
+		showMenu()
+	case BUTTON_CODE_PRINT_MENU:
 		showMenu()
 	}
 }
