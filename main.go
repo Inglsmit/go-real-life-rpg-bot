@@ -219,11 +219,60 @@ func showRewards() {
 	showActivities(gRewards, "Spend your coins or comeback to menu:", false)
 }
 
+func identifyActivity(activities Activities, choiceCode string) (activity *Activity, found bool) {
+	for _, activity := range activities {
+		if choiceCode == activity.code {
+			return activity, true
+		}
+	}
+	return nil, false
+}
+
+func processUsefulActivity(activity *Activity, user *User) {
+	errorMsg := ""
+	if activity.coins == 0 {
+		errorMsg = fmt.Sprintf(`the activity "%s" doesn't have a specified cost`, activity.name)
+	} else if user.coins+activity.coins > MAX_USER_COINS {
+		errorMsg = fmt.Sprintf("you cannot have more than %d %s", MAX_USER_COINS, EMOJI_COIN)
+	}
+
+	resultMessage := ""
+	if errorMsg != "" {
+		resultMessage = fmt.Sprintf("%s, I'm sorry, but %s %s Your balance remains unchanged.", user.name, errorMsg, EMOJI_SAD)
+	} else {
+		user.coins += activity.coins
+		resultMessage = fmt.Sprintf(`%s, the "%s" activity is completed! %d %s has been added to your account. Keep it up! %s%s Now you have %d %s`,
+			user.name, activity.name, activity.coins, EMOJI_COIN, EMOJI_BICEPS, EMOJI_SUNGLASSES, user.coins, EMOJI_COIN)
+	}
+	sendStringMessage(resultMessage)
+}
+
+func processRewards(activity *Activity, user *User) {
+	errorMsg := ""
+	if activity.coins == 0 {
+		errorMsg = fmt.Sprintf(`the reward "%s" doesn't have a specified cost`, activity.name)
+	} else if user.coins < activity.coins {
+		errorMsg = fmt.Sprintf(`you currently have %d %s. You cannot afford "%s" for %d %s`, user.coins, EMOJI_COIN, activity.name, activity.coins, EMOJI_COIN)
+	}
+
+	resultMessage := ""
+	if errorMsg != "" {
+		resultMessage = fmt.Sprintf("%s, I'm sorry, but %s %s Your balance remains unchanged, the reward is unavailable %s", user.name, errorMsg, EMOJI_SAD, EMOJI_DONT_KNOW)
+	} else {
+		user.coins -= activity.coins
+		resultMessage = fmt.Sprintf(`%s, the reward "%s" has been paid for, get started! %d %s has been deducted from your account. Now you have %d %s`, user.name, activity.name, activity.coins, EMOJI_COIN, user.coins, EMOJI_COIN)
+	}
+	sendStringMessage(resultMessage)
+}
+
 func updateProcessing(update *tgbotapi.Update) {
 	user, found := getUserFromUpdate(update)
 	if !found {
 		if user, found = storeUserFromUpdate(update); !found {
-			gBot.Send(tgbotapi.NewMessage(gChatId, "Can't identify user"))
+			_, err := gBot.Send(tgbotapi.NewMessage(gChatId, "Can't identify user"))
+			if err != nil {
+				return
+			}
 			return
 		}
 	}
@@ -245,6 +294,28 @@ func updateProcessing(update *tgbotapi.Update) {
 		showMenu()
 	case BUTTON_CODE_PRINT_MENU:
 		showMenu()
+	default:
+		if usefulActivity, isFound := identifyActivity(gUsefulActivities, choiceCode); isFound {
+			processUsefulActivity(usefulActivity, user)
+
+			delay(2)
+			showUsefulActivities()
+			return
+		}
+		if reward, isFound := identifyActivity(gRewards, choiceCode); isFound {
+			processRewards(reward, user)
+
+			delay(2)
+			showRewards()
+			return
+		}
+
+		log.Printf(`[%T] !ERROR!: Unknown code "%s"`, time.Now(), choiceCode)
+		msg := fmt.Sprintf("%s, sorry, I don't code '%s' %s. Ask administrator about support", user.name, choiceCode, EMOJI_SAD)
+		_, err := gBot.Send(tgbotapi.NewMessage(gChatId, msg))
+		if err != nil {
+			return
+		}
 	}
 }
 

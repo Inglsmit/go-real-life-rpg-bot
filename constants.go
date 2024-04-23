@@ -4,7 +4,6 @@ const (
 	EMOJI_COIN         = "\U0001FA99"   // (coin)
 	EMOJI_SMILE        = "\U0001F642"   // 🙂
 	EMOJI_SUNGLASSES   = "\U0001F60E"   // 😎
-	EMOJI_WOW          = "\U0001F604"   // 😄
 	EMOJI_DONT_KNOW    = "\U0001F937"   // 🤷
 	EMOJI_SAD          = "\U0001F63F"   // 😿
 	EMOJI_BICEPS       = "\U0001F4AA"   // 💪
@@ -25,6 +24,7 @@ const (
 	BUTTON_CODE_REWARDS           = "show_rewards"
 	BUTTON_CODE_PRINT_MENU        = "print_menu"
 
-	TOKEN_NAME_IN_OS      = "real_life_rpg_bot"
-	UPDATE_CONFIG_TIMEOUT = 60
+	//	TOKEN_NAME_IN_OS             = "real_life_rpg_bot"
+	UPDATE_CONFIG_TIMEOUT        = 60
+	MAX_USER_COINS        uint16 = 500
 )
